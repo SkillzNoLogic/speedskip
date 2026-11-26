@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "name": "SpeedSkip",
+  "version": "1.4.0",
+  "description": "SpeedSkip sends short links to bypass.city or Aizernal automatically, flags unsupported shorteners, and lets you paste a link to skip.",
+  "minimum_chrome_version": "106",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "tabs",
+    "webNavigation",
+    "webRequest",
+    "storage",
+    "scripting",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://aizernal.xyz/*"
+      ],
+      "js": [
+        "resolver.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_title": "SpeedSkip",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    },
+    "default_popup": "popup.html"
+  },
+  "commands": {
+    "toggle-speedskip": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "Turn SpeedSkip on or off"
+    },
+    "skip-current-tab": {
+      "suggested_key": {
+        "default": "Alt+Shift+K"
+      },
+      "description": "Skip the short link in the current tab"
+    }
+  }
+}

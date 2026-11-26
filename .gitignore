@@ -1,0 +1,9 @@
+# Build output (rebuilt with `npm run package`; attached to GitHub releases)
+dist/
+node_modules/
+
+# Never commit the extension signing key or signed packages
+*.pem
+*.crx
+
+.DS_Store

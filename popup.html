@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SpeedSkip</title>
+  <style>
+    :root {
+      --bg: #ffffff; --fg: #1d1d1f; --muted: #6b6b70; --line: #e2e2e6;
+      --field: #f5f5f7; --card: #f7f7f9; --accent: #d81b60; --accent-fg: #ffffff;
+      --accent-soft: rgba(216, 27, 96, .12);
+      --ok: #1b7f3b; --bad: #c62828; --off: #a0a0a6;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1f1f22; --fg: #ececf0; --muted: #a0a0a8; --line: #36363c;
+        --field: #2a2a2f; --card: #26262a; --accent: #d81b60; --accent-fg: #ffffff;
+        --accent-soft: rgba(255, 79, 139, .16);
+        --ok: #4cc77a; --bad: #ff6b6b; --off: #5a5a62;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; width: 340px; padding: 14px 16px 16px;
+      font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--bg); color: var(--fg);
+    }
+    button, input, select { font: inherit; color: inherit; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand img { width: 32px; height: 32px; flex: none; }
+    h1 { font-size: 15px; margin: 0; font-weight: 700; letter-spacing: .2px; }
+    h2 { font-size: 13px; margin: 0; font-weight: 600; }
+    .state { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .muted { color: var(--muted); }
+
+    /* switch */
+    .switch { position: relative; width: 40px; height: 22px; flex: none; }
+    .switch.small { width: 34px; height: 19px; }
+    .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+    .track { position: absolute; inset: 0; border-radius: 11px; background: var(--off); pointer-events: none; }
+    .track::after {
+      content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+      border-radius: 50%; background: #fff;
+    }
+    .switch.small .track::after { width: 13px; height: 13px; }
+    .switch input:checked + .track { background: var(--accent); }
+    .switch input:checked + .track::after { transform: translateX(18px); }
+    .switch.small input:checked + .track::after { transform: translateX(15px); }
+    .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+    /* Animate only after the saved state is shown, so it opens without a slide. */
+    .animate .track { transition: background .15s; }
+    .animate .track::after { transition: transform .15s; }
+
+    .access {
+      margin-top: 12px; padding: 10px 12px; border-radius: 8px;
+      border: 1px solid var(--bad); background: rgba(198, 40, 40, .08);
+    }
+    .access p { margin: 2px 0 8px; color: var(--muted); font-size: 12px; }
+    .counter {
+      margin-top: 12px; padding: 8px 10px; border-radius: 8px; background: var(--accent-soft);
+      display: flex; align-items: baseline; gap: 6px;
+    }
+    .counter strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+
+    hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0 12px; }
+    label.title { display: block; font-weight: 600; margin-bottom: 6px; }
+    .inline { display: flex; gap: 6px; }
+    input[type="url"], input[type="text"], select {
+      min-width: 0; padding: 7px 9px; background: var(--field);
+      border: 1px solid var(--line); border-radius: 6px;
+    }
+    input[type="url"], input[type="text"] { flex: 1; }
+    input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+    button.primary {
+      padding: 7px 12px; font-weight: 600; border: 0; border-radius: 6px;
+      background: var(--accent); color: var(--accent-fg); cursor: pointer; flex: none;
+    }
+    button.link {
+      padding: 0; border: 0; background: none; color: var(--accent); cursor: pointer;
+      font-size: 12px; font-weight: 600;
+    }
+    button.link:hover { text-decoration: underline; }
+    button:disabled { opacity: .6; cursor: default; }
+    .result { min-height: 18px; margin-top: 6px; font-size: 12px; }
+    .ok { color: var(--ok); }
+    .bad { color: var(--bad); }
+    .hint { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+
+    /* recent skips */
+    .recent {
+      list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px;
+      max-height: 252px; overflow-y: auto; overscroll-behavior: contain;
+    }
+    .recent li { background: var(--card); border-radius: 8px; padding: 7px 9px; min-width: 0; }
+    .recent .top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .recent .url { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+    .chip {
+      flex: none; font-size: 10.5px; font-weight: 600; padding: 1px 6px; border-radius: 9px;
+      background: var(--accent-soft); color: var(--accent);
+    }
+    @media (prefers-color-scheme: dark) { .chip { color: #ff6fa0; } }
+    .recent .dest { display: block; margin-top: 2px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .recent .dest a { color: var(--ok); text-decoration: none; }
+    .recent .dest a:hover { text-decoration: underline; }
+    .recent .actions { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 4px; align-items: center; }
+    .recent .actions button { white-space: nowrap; }
+    .recent .time { margin-left: auto; font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .empty { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+    /* settings */
+    details > summary {
+      cursor: pointer; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 6px;
+    }
+    details > summary::-webkit-details-marker { display: none; }
+    details > summary::before { content: "▸"; color: var(--muted); font-size: 11px; transition: transform .15s; }
+    details[open] > summary::before { transform: rotate(90deg); }
+    .setting { margin-top: 12px; }
+    .setting .row { align-items: flex-start; }
+    .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; margin-top: 6px; }
+    .seg label { padding: 5px 12px; cursor: pointer; font-size: 12px; }
+    .seg input { position: absolute; opacity: 0; pointer-events: none; }
+    .seg input:checked + span { color: var(--accent-fg); }
+    .seg label:has(input:checked) { background: var(--accent); color: var(--accent-fg); }
+    .seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .keys { margin: 6px 0 0; padding: 0; list-style: none; font-size: 12px; display: grid; gap: 3px; }
+    kbd {
+      font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 1px 5px; border-radius: 4px;
+      background: var(--field); border: 1px solid var(--line);
+    }
+    .rules { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+    .rules li { display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: 6px; padding: 5px 8px; }
+    .rules .domain { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rules .remove { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px; }
+    .rules .remove:hover { color: var(--bad); }
+    .add-rule { margin-top: 8px; display: grid; grid-template-columns: 1fr auto auto; gap: 6px; }
+    .add-rule select { padding: 7px 4px; }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <div class="brand">
+      <img src="icons/icon32.png" srcset="icons/icon32.png 1x, icons/icon128.png 4x" alt="">
+      <div>
+        <h1>SpeedSkip</h1>
+        <div class="state" id="state">Loading…</div>
+      </div>
+    </div>
+    <div class="switch">
+      <input type="checkbox" id="enabled" role="switch" aria-label="Automatic skipping">
+      <span class="track"></span>
+    </div>
+  </div>
+
+  <div class="access" id="access" hidden>
+    <strong>SpeedSkip needs access to websites</strong>
+    <p>Without it, short links can't be detected or skipped.</p>
+    <button type="button" class="primary" id="grant-access">Allow access</button>
+    <div class="result" id="access-result" role="status"></div>
+  </div>
+
+  <div class="counter" aria-live="polite">
+    <strong id="count">0</strong><span id="count-label" class="muted">links skipped</span>
+  </div>
+
+  <hr>
+
+  <form id="paste-form" novalidate>
+    <label class="title" for="link">Bypass a link</label>
+    <div class="inline">
+      <input type="url" id="link" placeholder="Paste a short link" autocomplete="off" spellcheck="false" required>
+      <button type="submit" class="primary" id="go">Bypass</button>
+    </div>
+    <div class="result" id="result" role="status"></div>
+    <div class="hint">Works even when automatic skipping is off. You can also right-click any link → <b>Skip with SpeedSkip</b>.</div>
+  </form>
+
+  <hr>
+
+  <section>
+    <div class="row">
+      <h2>Recent skips</h2>
+      <button type="button" class="link" id="clear-history" hidden>Clear</button>
+    </div>
+    <ul class="recent" id="recent"></ul>
+    <div class="empty" id="recent-empty">Nothing skipped yet.</div>
+    <div class="result" id="recent-result" role="status"></div>
+  </section>
+
+  <hr>
+
+  <details id="settings">
+    <summary>Settings</summary>
+
+    <div class="setting">
+      <div class="muted">Aizernal opens the destination in</div>
+      <div class="seg" role="radiogroup" aria-label="Open the destination in">
+        <label><input type="radio" name="open-destination" value="same"><span>Same tab</span></label>
+        <label><input type="radio" name="open-destination" value="new"><span>New tab</span></label>
+      </div>
+      <div class="hint">bypass.city uses its own setting on its page.</div>
+    </div>
+
+    <div class="setting">
+      <div class="row">
+        <div>
+          <div>Keyboard shortcuts</div>
+          <ul class="keys" id="keys"></ul>
+        </div>
+        <div class="switch small">
+          <input type="checkbox" id="shortcuts" role="switch" aria-label="Keyboard shortcuts">
+          <span class="track"></span>
+        </div>
+      </div>
+      <button type="button" class="link" id="change-keys" style="margin-top:6px">Change shortcuts</button>
+      <div class="result" id="keys-result" role="status"></div>
+    </div>
+
+    <div class="setting">
+      <div>My sites</div>
+      <div class="hint">Your rules override the built-in lists.</div>
+      <ul class="rules" id="rules"></ul>
+      <form class="add-rule" id="rule-form" novalidate>
+        <input type="text" id="rule-domain" placeholder="example.com" autocomplete="off" spellcheck="false" aria-label="Site">
+        <select id="rule-action" aria-label="What to do">
+          <option value="bypassCity">bypass.city</option>
+          <option value="aizernal">Aizernal</option>
+          <option value="never">Never skip</option>
+        </select>
+        <button type="submit" class="primary">Add</button>
+      </form>
+      <div class="result" id="rule-result" role="status"></div>
+    </div>
+  </details>
+
+  <script src="domains.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
